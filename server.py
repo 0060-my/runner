@@ -36,7 +36,6 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         cmd = (
-            "cd /actions-runner && "
             f"./config.sh --url {repo} --token {token} --unattended --replace && "
             "touch .installed.lock && "
             "./run.sh &"
@@ -47,7 +46,7 @@ class Handler(BaseHTTPRequestHandler):
         if exit_code != 0:
             self._resp(400, error)
             return
-        self._resp(200, "runed")
+        self._resp(200, exit_code)
 
 if __name__ == "__main__":
     server = HTTPServer(("0.0.0.0", PORT), Handler)
