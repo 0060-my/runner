@@ -35,24 +35,19 @@ class Handler(BaseHTTPRequestHandler):
             self._resp(400, "Missing REPO_URL or RUNNER_TOKEN")
             return
 
-        try:
-            subprocess.check_call([
-                f"{RUNNER_DIR}/config.sh",
-                "--url", repo,
-                "--token", token,
-                "--unattended",
-                "--replace"
-            ])
-
-            with open(LOCK_FILE, "w") as f:
-                f.write("installed")
-
-            subprocess.Popen([f"{RUNNER_DIR}/run.sh"])
-
-            self._resp(200, "Runner started")
-
-        except Exception as e:
-            self._resp(500, str(e))
+        cmd = (
+            "cd /actions-runner && "
+            f"./config.sh --url {repo} --token {token} --unattended --replace && "
+            "touch .installed.lock && "
+            "./run.sh &"
+        )
+        
+        exit_code = os.system(cmd)
+        
+        if exit_code != 0:
+            self._resp(400, error)
+            return
+        self._resp(200, "runed")
 
 if __name__ == "__main__":
     server = HTTPServer(("0.0.0.0", PORT), Handler)
