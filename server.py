@@ -22,22 +22,27 @@ class Handler(BaseHTTPRequestHandler):
             self._resp(404, "Not Found")
 
     def do_POST(self):
-        if self.path != "/setup":
-            self._resp(404, "Not Found")
-            return
-
-        if os.path.exists(LOCK_FILE):
-            self._resp(200, "Already installed")
-            return
-
-        repo = os.environ.get("REPO_URL")
-        token = os.environ.get("RUNNER_TOKEN")
-
-        if not repo or not token:
-            self._resp(400, "Missing REPO_URL or RUNNER_TOKEN")
-            return
-
         try:
+            if self.path != "/setup":
+                self._resp(404, "Not Found")
+                return
+    
+            print("==== /setup called ====")
+    
+            if os.path.exists(LOCK_FILE):
+                self._resp(200, "Already installed")
+                return
+    
+            repo = os.environ.get("REPO_URL")
+            token = os.environ.get("RUNNER_TOKEN")
+    
+            print("Repo:", repo)
+            print("Token exists:", bool(token))
+    
+            if not repo or not token:
+                self._resp(400, "Missing REPO_URL or RUNNER_TOKEN")
+                return
+    
             cmd = [
                 "./config.sh",
                 "--url", repo,
@@ -45,38 +50,37 @@ class Handler(BaseHTTPRequestHandler):
                 "--unattended",
                 "--replace"
             ]
-
+    
+            print("Running config.sh...")
+    
             result = subprocess.run(
                 cmd,
                 cwd=RUNNER_DIR,
                 capture_output=True,
                 text=True
             )
-
-            print("========== CONFIG.SH RESULT ==========")
+    
             print("Return code:", result.returncode)
             print("STDOUT:\n", result.stdout)
             print("STDERR:\n", result.stderr)
-            print("======================================")
-
+    
             if result.returncode != 0:
-                self._resp(500, result.stderr)
+                msg = f"CONFIG FAILED\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+                print(msg)
+                self._resp(500, msg)
                 return
-
-            # 创建 lock 文件
-            with open(LOCK_FILE, "w") as f:
-                f.write("installed")
-
-            # 启动 runner
-            subprocess.Popen(
-                ["./run.sh"],
-                cwd=RUNNER_DIR
-            )
-
+    
+            print("Config success")
+    
+            subprocess.Popen(["./run.sh"], cwd=RUNNER_DIR)
+    
             self._resp(200, "Runner installed and started")
-
+    
         except Exception as e:
-            self._resp(500, str(e))
+            import traceback
+            tb = traceback.format_exc()
+            print("EXCEPTION:\n", tb)
+            self._resp(500, tb)
 
 
 if __name__ == "__main__":
