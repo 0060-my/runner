@@ -28,7 +28,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 repo_url = os.environ.get("REPO_URL")
                 token = os.environ.get("RUNNER_TOKEN")
-
+                print("ENV:", os.environ)
                 if not repo_url or not token:
                     self._response(400, "Missing REPO_URL or RUNNER_TOKEN")
                     return
