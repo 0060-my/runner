@@ -2,7 +2,7 @@ import os
 import subprocess
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-RUNNER_DIR = os.environ.get("RUNNER_WORKDIR", "/tmp/runner")
+RUNNER_DIR = "/actions-runner"
 LOCK_FILE = f"{RUNNER_DIR}/.installed.lock"
 PORT = int(os.environ.get("PORT", 8080))
 
