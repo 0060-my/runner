@@ -4,13 +4,12 @@ USER root
 
 RUN apt-get update && apt-get install -y python3
 
-WORKDIR /app
+COPY server.py /home/runner/server.py
 
-COPY server.py /app/server.py
+ENTRYPOINT []
 
-EXPOSE 8080
+CMD ["/bin/sh", "-c", "cd /home/runner && python3 server.py"]
 
-CMD ["python3", "/app/server.py"]
 
 
 
