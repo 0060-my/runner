@@ -2,62 +2,59 @@ import os
 import subprocess
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+RUNNER_DIR = "/home/runner"
+LOCK_FILE = f"{RUNNER_DIR}/.installed.lock"
 PORT = int(os.environ.get("PORT", 8080))
-LOCK_FILE = "/runner/.installed.lock"
 
 class Handler(BaseHTTPRequestHandler):
 
-    def _response(self, code, body):
+    def _resp(self, code, msg):
         self.send_response(code)
-        self.send_header("Content-type", "text/plain")
         self.end_headers()
-        self.wfile.write(body.encode())
+        self.wfile.write(msg.encode())
 
     def do_GET(self):
         if self.path == "/health":
-            self._response(200, "OK")
+            self._resp(200, "OK")
         else:
-            self._response(404, "Not Found")
+            self._resp(404, "Not Found")
 
     def do_POST(self):
-        if self.path == "/setup":
-            if os.path.exists(LOCK_FILE):
-                self._response(200, "Runner already installed")
-                return
+        if self.path != "/setup":
+            self._resp(404, "Not Found")
+            return
 
-            try:
-                repo_url = os.environ.get("REPO_URL")
-                token = os.environ.get("RUNNER_TOKEN")
-                print("ENV:", os.environ)
-                if not repo_url or not token:
-                    self._response(400, "Missing REPO_URL or RUNNER_TOKEN")
-                    return
+        if os.path.exists(LOCK_FILE):
+            self._resp(200, "Already installed")
+            return
 
-                # 注册 runner
-                subprocess.check_call([
-                    "./config.sh",
-                    "--url", repo_url,
-                    "--token", token,
-                    "--unattended",
-                    "--replace"
-                ])
+        repo = os.environ.get("REPO_URL")
+        token = os.environ.get("RUNNER_TOKEN")
 
-                # 创建 lock 文件
-                with open(LOCK_FILE, "w") as f:
-                    f.write("installed")
+        if not repo or not token:
+            self._resp(400, "Missing REPO_URL or RUNNER_TOKEN")
+            return
 
-                # 启动 runner（后台）
-                subprocess.Popen(["./run.sh"])
+        try:
+            subprocess.check_call([
+                f"{RUNNER_DIR}/config.sh",
+                "--url", repo,
+                "--token", token,
+                "--unattended",
+                "--replace"
+            ])
 
-                self._response(200, "Runner installed and started")
+            with open(LOCK_FILE, "w") as f:
+                f.write("installed")
 
-            except Exception as e:
-                self._response(500, f"Error: {str(e)}")
-        else:
-            self._response(404, "Not Found")
+            subprocess.Popen([f"{RUNNER_DIR}/run.sh"])
 
+            self._resp(200, "Runner started")
+
+        except Exception as e:
+            self._resp(500, str(e))
 
 if __name__ == "__main__":
     server = HTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"Server running on port {PORT}")
+    print(f"Server running on {PORT}")
     server.serve_forever()
