@@ -20,6 +20,15 @@ class Handler(BaseHTTPRequestHandler):
             self._resp(200, "OK")
         else:
             self._resp(404, "Not Found")
+            
+    def do_HEAD(self):
+        if self.path == "/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("X-Service-Status", "ok")
+            self.end_headers()
+        else:
+            self._resp(404, "Not Found")
 
     def do_POST(self):
         try:
